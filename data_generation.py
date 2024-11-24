@@ -1,64 +1,46 @@
 import numpy as np
+import pandas as pd
 import random
 import networkx as nx
 import matplotlib.pyplot as plt
 from CausalPlayground import CausalGraphGenerator, SCMGenerator, StructuralCausalModel
-from typing import Callable, Dict
-
-def create_dag(n: int, density: float) -> nx.DiGraph:
-    """
-    Creates a Directed Acyclic Graph (DAG) with the specified number of variables, and a given density.
-
-    Parameters:
-    - n (int): Number of endogenous variables (internal nodes).
-    - density (float): Desired density
-
-    Returns:
-    - nx.DiGraph: A directed acyclic graph meeting the specified constraints.
-    """
-
-    # density can't > 0.5 for a DAG
-    assert 0<density<=0.5
-
-    # Calculate the maximum number of edges possible in a graph with n nodes
-    max_edges = n * (n - 1)
-
-    # Calculate the number of edges needed for the specified density
-    num_edges = int(density * max_edges)
-
-    if n-1 > num_edges:
-        raise ValueError("The desired density is too small to achieve weak connectivity.")
 
 
-    nodes = [f"X{i}" for i in range(n)]
+# creates a random DAG with weak connectivity. expected_degree ~ average number of edges per node
+def create_dag(n: int, expected_degree: int) -> nx.DiGraph:
+    # creates random spanning tree
+    undirected_graph = nx.random_labeled_tree(n)
 
-
-    # Create an empty directed graph
     dag = nx.DiGraph()
-    dag.add_nodes_from(nodes)
+    dag.add_nodes_from(undirected_graph.nodes)
 
-    used_edges=set()
+    # randomly assigns directions to spanning tree edges
+    for u, v in undirected_graph.edges():
+        if random.choice([True, False]):
+            dag.add_edge(u, v)
+            # reverses direction if adding edge creates a cycle
+            if not nx.is_directed_acyclic_graph(dag):
+                dag.remove_edge(u, v)
+                dag.add_edge(v, u)
+        else:
+            dag.add_edge(v, u)
+            if not nx.is_directed_acyclic_graph(dag):
+                dag.remove_edge(v, u)
+                dag.add_edge(u, v)
 
-    # Ensure weak connectivity and acyclicity by connecting each node to a random node later in the topological order
-    for i in range(n - 1):
-        target = random.choice(nodes[i + 1:])
-        dag.add_edge(nodes[i], target)
-        used_edges.add((nodes[i], target))
+    max_edges = n * (n - 1) // 2  # max number of possible edges in a DAG
+    num_edges = min(expected_degree * n / 2, max_edges)
 
-
-    # Generate all possible edges while preserving acyclicity and ensuring that we don't duplicate any edges
-    possible_edges = [
-        (source, target) for i, source in enumerate(nodes)
-        for target in nodes[i + 1:]
-        if (source, target) not in used_edges
-    ]
+    possible_edges = [(i, j) for i in range(n) for j in range(n) if i != j and not dag.has_edge(i, j)]
     random.shuffle(possible_edges)
 
-    # Add edges to reach the desired density
+    # randomly adds additional edges while maintaining acyclicity
     for source, target in possible_edges:
         if dag.number_of_edges() >= num_edges:
             break
         dag.add_edge(source, target)
+        if not nx.is_directed_acyclic_graph(dag):
+            dag.remove_edge(source, target)
 
     return dag
 
@@ -70,19 +52,43 @@ def display(graph: nx.DiGraph):
     plt.title("Generated DAG")
     plt.show()
 
-def create_scms(n_endo: int, p: float):
-    graph=create_dag(n_endo, p)
 
-    # Define a dictionary of functions
-    all_functions: Dict[str, Callable] = {
-        "random_linear": lambda x: sum(random.uniform(-10, 10) * xi for xi in x) + random.uniform(-10, 10)
-    }
-
-    scm_generator=SCMGenerator(all_functions=all_functions, seed=6)
-    scm=scm_generator.create_scm_from_graph(graph=graph, possible_functions=["random_linear"],
-                                            exo_distribution=np.random.normal,
-                                            exo_distribution_kwargs={"loc": 0, "scale": 1}) # mean 0, std deviation 1
-    print(scm)
+def save(graph: nx.DiGraph, expected_degree: int):
+    plt.figure(figsize=(10, 8))
+    nx.draw(graph, with_labels=True, node_size=500, node_color='skyblue', font_size=10, font_weight='bold',
+            arrows=True)
+    plt.title("Generated DAG")
+    plt.savefig(f"dag_nodes_{graph.number_of_nodes()}_degree_{expected_degree}.png")
+    plt.close()
 
 
-dag=create_dag(20, 0.2)
+# generates a dataframe of synthetic data based on a causal DAG
+# coef_range = range for random coefficients, intercept_range = range for random intercepts
+def generate_data(graph, num_rows=1000, coef_range=(0.5, 1.5), intercept_range=(-1.0, 1.0),
+                  random_seed=None) -> pd.DataFrame:
+    if not nx.is_directed_acyclic_graph(graph):
+        raise ValueError("The input graph must be a directed acyclic graph (DAG).")
+
+    if random_seed is not None:
+        np.random.seed(random_seed)
+
+    topo_order = list(nx.topological_sort(graph))
+
+    # dictionary that stores generated data for each node
+    data = {node: np.zeros(num_rows) for node in topo_order}
+
+    for node in topo_order:
+        parents = list(graph.predecessors(node))
+        if not parents:
+            data[node] = np.random.normal(0, 1, num_rows)
+        else:
+            coefficients = np.random.uniform(coef_range[0], coef_range[1], size=len(parents))
+            intercept = np.random.uniform(intercept_range[0], intercept_range[1])
+
+            # child node is a linear combination of parent values and intercept
+            parent_values = np.array([data[parent] for parent in parents])
+            data[node] = np.dot(coefficients, parent_values) + intercept
+
+    # sorts the columns so that they are in numerical, not topological, order
+    df = pd.DataFrame(data)
+    return df[sorted(df.columns)]
