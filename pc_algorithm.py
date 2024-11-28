@@ -73,6 +73,8 @@ def orient_edges_incident_on_colliders(adjacency_matrix: np.ndarray) -> np.ndarr
 
     return adjacency_matrix
 
+# returns an adjacency matrix representing the essential graph. matrix[a][b] means that node a is adjacent to node b.
+# if (a,b) is a directed edge, matrix[a][b]=1 and matrix[b][a]=0. if (a,b) is undirected, matrix[a][b]=matrix[b][a]=1
 def pc(dag: nx.DiGraph) -> np.ndarray:
     skeleton_adj_matrix=skeleton(dag)
     adj_matrix_with_immoralities=add_immoralities(dag, skeleton_adj_matrix)

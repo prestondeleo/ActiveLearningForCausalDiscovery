@@ -95,3 +95,18 @@ class Test(TestCase):
                                     [0, 0, 0, 0, 0]])
 
         assert np.array_equal(pc_algorithm.pc(dag), expected_matrix)
+
+        # case where essential graph is same as original
+        dag2=nx.DiGraph()
+        dag2.add_edges_from([(0,2), (1,2), (2,3)])
+        # reorders the rows of the adjacency matrix so that the order is the same as the output from pc()
+        expected_matrix_2=nx.adjacency_matrix(dag2, nodelist=[0, 1, 2, 3]).toarray()
+        assert np.array_equal(pc_algorithm.pc(dag2), expected_matrix_2)
+
+        # case where essential graph has all undirected edges
+        dag3=nx.DiGraph()
+        dag3.add_edges_from([(1,0), (1,2)])
+        expected_matrix_3 = np.array([[0, 1, 0],
+                                      [1, 0, 1],
+                                      [0, 1, 0]])
+        assert np.array_equal(pc_algorithm.pc(dag3), expected_matrix_3)

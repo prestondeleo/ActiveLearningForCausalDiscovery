@@ -3,7 +3,7 @@ import pandas as pd
 import random
 import networkx as nx
 import matplotlib.pyplot as plt
-from CausalPlayground import CausalGraphGenerator, SCMGenerator, StructuralCausalModel
+#from CausalPlayground import CausalGraphGenerator, SCMGenerator, StructuralCausalModel
 
 
 # creates a random DAG with weak connectivity. expected_degree ~ average number of edges per node
@@ -66,8 +66,7 @@ def save(graph: nx.DiGraph, expected_degree: int):
 # coef_range = range for random coefficients, intercept_range = range for random intercepts
 def generate_data(graph, num_rows=1000, coef_range=(0.5, 1.5), intercept_range=(-1.0, 1.0),
                   random_seed=None) -> pd.DataFrame:
-    if not nx.is_directed_acyclic_graph(graph):
-        raise ValueError("The input graph must be a directed acyclic graph (DAG).")
+    assert nx.is_directed_acyclic_graph(graph)
 
     if random_seed is not None:
         np.random.seed(random_seed)
