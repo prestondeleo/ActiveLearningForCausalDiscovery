@@ -91,3 +91,46 @@ def generate_data(graph, num_rows=1000, coef_range=(0.5, 1.5), intercept_range=(
     # sorts the columns so that they are in numerical, not topological, order
     df = pd.DataFrame(data)
     return df[sorted(df.columns)]
+
+# adj_matrix is for a CPDAG
+def remove_undirected_edges_from(adj_matrix: np.ndarray):
+    undirected_edges = (adj_matrix == 1) & (adj_matrix.T == 1)
+
+    # Remove symmetric edges by setting them to 0
+    adj_matrix[undirected_edges] = 0
+
+    return adj_matrix
+
+# selects a random connected subset of k nodes from the graph represented by adjacency matrix A
+# k = desired number of nodes
+def select_random_subgraph_from(A, k):
+    num_nodes = A.shape[0]
+
+    # randomly selects starting node
+    start_node = np.random.choice(num_nodes)
+    selected_nodes = [start_node]
+
+    # candidates for next node to add
+    possible_candidates = set(np.where(A[start_node] > 0)[0])
+
+    while len(selected_nodes) < k:
+        if not possible_candidates:
+            raise ValueError("Cannot expand subset further while maintaining connectivity.")
+
+        new_node = np.random.choice(list(possible_candidates))
+
+        selected_nodes.append(new_node)
+        possible_candidates.remove(new_node) # doesn't allow a node to be added twice
+
+        new_possible_neighbors = set(np.where(A[new_node] > 0)[0])
+        possible_candidates.update(new_possible_neighbors - set(selected_nodes))
+
+    return A[np.ix_(selected_nodes, selected_nodes)], selected_nodes
+
+expected_matrix = np.array([[0, 0, 1, 0, 0],
+                                    [0, 0, 1, 0, 0],
+                                    [0, 0, 0, 1, 1],
+                                    [0, 0, 0, 0, 0],
+                                    [0, 0, 0, 0, 0]])
+
+print(select_random_subgraph_from(expected_matrix, 3))

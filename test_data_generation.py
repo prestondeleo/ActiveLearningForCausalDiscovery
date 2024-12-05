@@ -108,3 +108,19 @@ class Test(TestCase):
         assert_properties(data_generation.create_dag(10, 4))
         assert_properties(data_generation.create_dag(50, 2))
         assert_properties(data_generation.create_dag(50, 20))
+
+    def test_remove_undirected_edges_from(self):
+        A = np.array([
+            [0, 1, 1, 0],
+            [1, 0, 0, 1],
+            [1, 0, 0, 0],
+            [1, 0, 0, 0]
+        ])
+
+        expected = np.array([
+            [0, 0, 0, 0],
+            [0, 0, 0, 1],
+            [0, 0, 0, 0],
+            [1, 0, 0, 0]
+        ])
+        assert np.array_equal(expected, data_generation.remove_undirected_edges_from(A))
