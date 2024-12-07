@@ -90,24 +90,44 @@ class causalQBC:
 
             outcome = str(data.columns[neighbor])
             treatment = str(data.columns[interv_node])
-            model = CausalModel(
+            model_a_b = CausalModel(
                             data=data,
                             treatment=treatment,
                             outcome=outcome
                             #,graph=graph
             )
-            identified_estimand = model.identify_effect()
+            identified_estimand_a_b = model_a_b.identify_effect()
 
-            causal_estimate = model.estimate_effect(
-                identified_estimand,
+            causal_estimate_a_b = model_a_b.estimate_effect(
+                identified_estimand_a_b,
                 method_name="backdoor.linear_regression" #I DONT KNOW IF THIS IS RIGHT!!!!
             )
 
-        print(f"Causal Estimate of {interv_node} -> {neighbor}: {causal_estimate.value}")
-        
+            outcome = str(data.columns[interv_node])
+            treatment = str(data.columns[neighbor])
+            model_b_a = CausalModel(
+                            data=data,
+                            treatment=treatment,
+                            outcome=outcome
+                            #,graph=graph
+            )
+            identified_estimand_b_a = model_b_a.identify_effect()
+
+            causal_estimate_b_a = model_b_a.estimate_effect(
+                identified_estimand_b_a,
+                method_name="backdoor.linear_regression" #I DONT KNOW IF THIS IS RIGHT!!!!
+            )
+
+
+
+
+        print(f"Causal Estimate of {interv_node} -> {neighbor}: {causal_estimate_a_b.value}")
+        print(f"Causal Estimate of {neighbor} -> {interv_node}: {causal_estimate_b_a.value}")
+
+        """
         if causal_estimate.value != 0:  # Adjust threshold based on domain knowledge
             oriented_edges.append((interv_node, neighbor))  # Direct effect found
-    
+        """
         return oriented_edges
 
 
