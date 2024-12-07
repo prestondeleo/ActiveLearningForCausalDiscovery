@@ -2,6 +2,11 @@ import data_generation as dg
 import pc_algorithm as pc_a
 import networkx as nx
 import numpy as np
+import pandas as pd
+import random
+import dowhy
+
+from dowhy import CausalModel
 """
 1. Need to generate synthetic graphs with real causal graphs
 
@@ -19,11 +24,7 @@ committe performs DAG generation beyon MEC (Markov Equivalence class)
 """
 
 
-G = dg.create_dag(n = 20, expected_degree = 1)
 
-dg.display(G)
-
-adj_matrx = pc_a.pc(G)
 
 
 class causalQBC:
@@ -56,20 +57,91 @@ class causalQBC:
 
 
 
-    def qbc_query():
+    def qbc_query(pcdag:np.ndarray, dag:np.ndarray, k, ):
+
+
+
+        """
+        telmiggido sleeps while the man belows!
+        """
         pass
 
 
     def query():
         pass
 
-def random(causal_dag, data, num_interventions):
-    pass
-    #ground_truth = 
+    #NEED TO DETERMINE IF CORRECT BELOW
+
+    def get_neighbors(self, pcdag:np.ndarray, node:int)->np.ndarray:
+        neighbors = np.where((pcdag[node, :] == 1) | (pcdag[:, node] == 1))[0]
+        return neighbors
+    
+    ###get_neighbors seems to work
+
+
+    def intervene_orient(self,pcdag:np.ndarray,data:pd.DataFrame, interv_node, neighbors):
+        oriented_edges = []
+        #treatment = data.columns[interv_node] 
+
+        G = nx.DiGraph(pcdag)
+        graph = nx.nx_pydot.to_pydot(G).to_string()
+        data.columns = data.columns.astype(str)
+        for neighbor in neighbors:
+
+            outcome = str(data.columns[neighbor])
+            treatment = str(data.columns[interv_node])
+            model = CausalModel(
+                            data=data,
+                            treatment=treatment,
+                            outcome=outcome,
+                            graph=graph
+            )
+        identified_estimand = model.identify_effect()
+
+        causal_estimate = model.estimate_effect(
+            identified_estimand,
+            method_name="backdoor.linear_regression" #I DONT KNOW IF THIS IS RIGHT!!!!
+        )
+
+        print(f"Causal Estimate of {interv_node} -> {neighbor}: {causal_estimate.value}")
+        
+        if causal_estimate.value != 0:  # Adjust threshold based on domain knowledge
+            oriented_edges.append((interv_node, neighbor))  # Direct effect found
+    
+        return oriented_edges
 
 
 
 
-def randomadv_query():
-    pass
+    def random(self, pcdag:np.ndarray, data:pd.DataFrame, k:int):
+        self.get_num_nodes(pcdag)
+        nodes = list(range(self.get_num_nodes(pcdag)))
+        interventional_nodes = random.sample(nodes, k)
+
+        for interv_node in interventional_nodes:
+            pass
+
+        pass
+
+    def randomadv_query():
+        pass
+
+if __name__ == '__main__':
+    G = dg.create_dag(n = 20, expected_degree = 1)
+
+    dg.display(G)
+
+    adj_matrix = pc_a.pc(G)
+
+    data = dg.generate_data(G)
+
+    print(data)
+
+    experiment = causalQBC(5, 5)
+    print(experiment.get_neighbors(pcdag = adj_matrix,node = 1))
+
+    print(experiment.intervene_orient(pcdag=adj_matrix,data = data, interv_node = 3, neighbors =experiment.get_neighbors(pcdag = adj_matrix,node = 3) ))
+
+
+
 
