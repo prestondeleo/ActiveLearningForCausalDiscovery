@@ -117,12 +117,8 @@ class causalQBC:
                 identified_estimand_b_a,
                 method_name="backdoor.linear_regression" #I DONT KNOW IF THIS IS RIGHT!!!!
             )
-
-
-
-
-        print(f"Causal Estimate of {interv_node} -> {neighbor}: {causal_estimate_a_b.value}")
-        print(f"Causal Estimate of {neighbor} -> {interv_node}: {causal_estimate_b_a.value}")
+            print(f"Causal Estimate of {interv_node} -> {neighbor}: {causal_estimate_a_b.value}")
+            print(f"Causal Estimate of {neighbor} -> {interv_node}: {causal_estimate_b_a.value}")
 
         """
         if causal_estimate.value != 0:  # Adjust threshold based on domain knowledge
