@@ -118,7 +118,7 @@ class causalQBC:
                 method_name="backdoor.linear_regression" #I DONT KNOW IF THIS IS RIGHT!!!!
             )
 
-            if abs(causal_estimate_a_b) >= abs(causal_estimate_b_a):
+            if abs(causal_estimate_a_b.value) >= abs(causal_estimate_b_a.value):
                 oriented_edges.append((interv_node, neighbor))
 
             else:
