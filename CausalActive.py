@@ -117,6 +117,14 @@ class causalQBC:
                 identified_estimand_b_a,
                 method_name="backdoor.linear_regression" #I DONT KNOW IF THIS IS RIGHT!!!!
             )
+
+            if abs(causal_estimate_a_b) >= (causal_estimate_b_a):
+                oriented_edges.append((interv_node, neighbor))
+
+            else:
+                oriented_edges.append((neighbor, interv_node))
+
+
             print(f"Causal Estimate of {interv_node} -> {neighbor}: {causal_estimate_a_b.value}")
             print(f"Causal Estimate of {neighbor} -> {interv_node}: {causal_estimate_b_a.value}")
 
