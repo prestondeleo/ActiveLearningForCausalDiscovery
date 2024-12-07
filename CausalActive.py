@@ -83,7 +83,7 @@ class causalQBC:
         oriented_edges = []
         #treatment = data.columns[interv_node] 
 
-        G = nx.DiGraph(pcdag)
+        #G = nx.DiGraph(pcdag)
         graph = nx.nx_pydot.to_pydot(G).to_string()
         data.columns = data.columns.astype(str)
         for neighbor in neighbors:
@@ -93,15 +93,15 @@ class causalQBC:
             model = CausalModel(
                             data=data,
                             treatment=treatment,
-                            outcome=outcome,
-                            graph=graph
+                            outcome=outcome
+                            #,graph=graph
             )
-        identified_estimand = model.identify_effect()
+            identified_estimand = model.identify_effect()
 
-        causal_estimate = model.estimate_effect(
-            identified_estimand,
-            method_name="backdoor.linear_regression" #I DONT KNOW IF THIS IS RIGHT!!!!
-        )
+            causal_estimate = model.estimate_effect(
+                identified_estimand,
+                method_name="backdoor.linear_regression" #I DONT KNOW IF THIS IS RIGHT!!!!
+            )
 
         print(f"Causal Estimate of {interv_node} -> {neighbor}: {causal_estimate.value}")
         
