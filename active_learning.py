@@ -74,17 +74,7 @@ class Experiment:
                     if pcdag[interv_node, neighbor] == 1 and  pcdag[neighbor, interv_node] == 1:
 
                         new_pcdag = self.discovery(pcdag=new_pcdag.copy(), interv_data = interv_data, neighbor_interv_data = neighbor_interv_data, interv_node=interv_node, neighbor=neighbor)
-
-
-        if nx.is_directed_acyclic_graph(nx.from_numpy_array(new_pcdag, create_using=nx.DiGraph)) == True:
-            print("It is a DAG!!!")
-            return new_pcdag
-        
-        else:
-            return False
-
-        #return new_pcdag
-
+        return new_pcdag
 
     def visualize_pcdag(self, adj_matrix: np.ndarray, pos=None, title="Generated Graph", figsize=(10, 8)):
 
