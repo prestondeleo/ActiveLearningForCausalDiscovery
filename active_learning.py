@@ -38,8 +38,52 @@ class Experiment:
 
         return intervened_data
     
-    def discovery(self, pcdag:np.ndarray, interv_data:pd.DataFrame, interv_node:int, neighbor:int)->np.ndarray:
-        pass
+    def discovery(self, pcdag:np.ndarray, interv_data:pd.DataFrame, neighbor_interv_data:pd.DataFrame, interv_node:int, neighbor:int)->np.ndarray:
+        model_1 = LinearRegression()
+        model_1.fit(interv_data[[interv_node]], interv_data[neighbor])
+        res_1 = interv_data[neighbor] - model_1.predict(interv_data[[interv_node]])
+
+        model_2 = LinearRegression()
+        
+        model_2.fit(neighbor_interv_data[[neighbor]], neighbor_interv_data[interv_node])
+        res_2 = neighbor_interv_data[interv_node] - model_2.predict(interv_data[[neighbor]])
+        
+  
+        if np.var(res_1) > np.var(res_2):
+            pcdag[interv_node, neighbor] = 1
+            pcdag[neighbor, interv_node] = 0
+
+        else:
+            pcdag[interv_node, neighbor] = 0
+            pcdag[neighbor, interv_node] = 1
+        return pcdag
+    
+    def total_full_discovery(self, true_causal_graph: nx.DiGraph, pcdag:np.ndarray, data:pd.DataFrame)->np.ndarray:
+        new_pcdag = pcdag.copy()
+        for interv_node in range(pcdag.shape[0]):
+                interv_data = self.intervene(true_causal_graph, data, interv_node)
+                #neighbor_interv_data = self.intervene(true_causal_graph, interv_node, data)
+                #print('interv node')
+                #print(interv_node)
+                neighbors = self.get_neighbors(pcdag, interv_node)
+                #print('neighbors')
+                #print(neighbors)
+                for neighbor in neighbors:
+                    neighbor_interv_data = self.intervene(true_causal_graph, data, neighbor)
+
+                    if pcdag[interv_node, neighbor] == 1 and  pcdag[neighbor, interv_node] == 1:
+
+                        new_pcdag = self.discovery(pcdag=new_pcdag.copy(), interv_data = interv_data, neighbor_interv_data = neighbor_interv_data, interv_node=interv_node, neighbor=neighbor)
+
+
+        if nx.is_directed_acyclic_graph(nx.from_numpy_array(new_pcdag, create_using=nx.DiGraph)) == True:
+            print("It is a DAG!!!")
+            return new_pcdag
+        
+        else:
+            return False
+
+        #return new_pcdag
 
 
     def visualize_pcdag(self, adj_matrix: np.ndarray, pos=None, title="Generated Graph", figsize=(10, 8)):
@@ -90,7 +134,7 @@ class Experiment:
 if __name__ == '__main__':
         np.random.seed(seed = 47)  
         random.seed(47)
-        G = dg.create_dag(n = 10, expected_degree = 3)
+        G = dg.create_dag(n = 20, expected_degree = 3)
         start_adj_matrix = nx.to_numpy_array(G)        
         pcdag = pc_a.pc(G)
         experiment = Experiment(5, 5)
@@ -103,5 +147,10 @@ if __name__ == '__main__':
 
         #print([int(child) for child in DAG.successors(8)])
 
-        intervened_data = experiment.intervene(DAG, data, 8)
-        print(intervened_data.to_string())
+        #intervened_data = experiment.intervene(DAG, data, 8)
+        #print(intervened_data.to_string())
+
+        predicted_adj_matrix = experiment.total_full_discovery(true_causal_graph = DAG, pcdag=pcdag, data=data)
+
+        experiment.visualize_pcdag(predicted_adj_matrix, pos=shared_pos, title="predicted DAG")
+
