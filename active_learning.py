@@ -120,7 +120,75 @@ class Experiment:
                 G.remove_edge(u, v)
                 G.add_edge(v, u)
         return nx.to_numpy_array(G), G
-    
+#def rand_subsam_w_rep(self, cpdag:np.ndarray,  num_nodes:int, min_perc_samp = 0.25, max_perc_samp = 0.9)    
+    def rand_subsam_w_rep(self, cpdag:np.ndarray)->np.ndarray:
+        #We start with the cpdag
+        #we remove all teh undirected edges
+        # we are left with a DAG now
+        #We make subgraphs from this new DAG
+        # we unorient edges in subgraphs and make this training data i.e. sunbgraph with some undirected edges and the DAG subgraph
+
+        #asfter this training we try to infer the original PCDAG and make a DAG
+
+
+
+        num_nodes = self.get_num_nodes(cpdag)
+        #np.random.seed(seed = 47)  
+        #random.seed(47)
+        G = nx.DiGraph(cpdag)
+        undirected_edges = [(i, j) for i, j in G.edges if G.has_edge(j, i)]
+        for u, v in undirected_edges:
+            if G.has_edge(v, u):
+                G.remove_edge(v, u)
+
+        original_num_isolated_nodes = nx.number_of_isolates(G)
+        edges = list(G.edges)
+        print('edges')
+        print(len(edges))
+        print(original_num_isolated_nodes)
+        subgraphs = []
+        subset_size = np.random.randint(2,  len(edges) + 1)
+        successful_draws = 0
+
+        while successful_draws != subset_size:
+            subset_size_graph = np.random.randint(2,  len(edges) + 1)
+            sampled_edges = random.choices(edges, k=subset_size_graph)#This might be doing with replacement
+                            
+            subgraph = nx.DiGraph()
+            subgraph.add_edges_from(sampled_edges)
+            subgraph_num_isolated_nodes = nx.number_of_isolates(subgraph)
+            if subgraph_num_isolated_nodes != original_num_isolated_nodes: #maybe its okay to have less nodes in subgraph
+                print(subgraph_num_isolated_nodes)
+                print(original_num_isolated_nodes)
+                continue
+                
+            else:
+                subgraph_adj_matrix = nx.to_numpy_array(subgraph, nodelist=range(num_nodes))  # Maintain node index consistency
+                subgraphs.append(subgraph_adj_matrix)
+                successful_draws += 1
+                print(successful_draws)
+
+        return subgraphs
+
+
+
+        #sample size would be number of nodes. 
+        #could be called subset size
+        """
+
+        num_nodes = self.get_num_nodes(cpdag)
+        #subset_indices
+        subset_size = np.random.randint(int(min_perc_samp * num_nodes),  int(max_perc_samp * num_nodes) + 1  )
+
+        sampled_indices = np.random.choice(num_nodes, size=subset_size, replace=True)
+
+        #subgraph_adjmatrix = np.ix_()
+        #Does not gurantee all nodes will be connected to at least one other node (single vertex with no edge)
+        subgraph_adjmatrix = cpdag.ix_(sampled_indices,sampled_indices)
+        """
+        #return subgraph_adjmatrix
+
+
 if __name__ == '__main__':
         np.random.seed(seed = 47)  
         random.seed(47)
@@ -128,6 +196,8 @@ if __name__ == '__main__':
         start_adj_matrix = nx.to_numpy_array(G)        
         pcdag = pc_a.pc(G)
         experiment = Experiment(5, 5)
+        """
+        #P1
         true_DAG, DAG = experiment.random_dag_from_pcdag(pcdag) #gets random graph from MEC(s)
         data = dg.generate_data(graph = DAG, random_seed=47, num_rows=20000)
 
@@ -144,3 +214,10 @@ if __name__ == '__main__':
 
         experiment.visualize_pcdag(predicted_adj_matrix, pos=shared_pos, title="predicted DAG")
 
+        test_mat, test_dag = experiment.rand_subsam_w_rep(cpdag = pcdag, num_nodes=4)
+        experiment.visualize_pcdag(adj_matrix=test_mat, pos=shared_pos)
+        #end p1
+        """
+        sample_subgraphs = experiment.rand_subsam_w_rep(cpdag = pcdag)
+
+    
