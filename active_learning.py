@@ -4,7 +4,6 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import random
-#from dowhy import CausalModel
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 from causallearn.utils.GraphUtils import GraphUtils
@@ -175,6 +174,9 @@ class Experiment:
                 print(successful_draws)
 
         return subgraphs
+    
+    def model_train_data(self, cpdag:np.ndarray)->tuple:
+        pass
 
 
 
@@ -194,7 +196,7 @@ class Experiment:
         """
         #return subgraph_adjmatrix
 
-
+"""
 if __name__ == '__main__':
         np.random.seed(seed = 47)  
         random.seed(47)
@@ -207,7 +209,7 @@ if __name__ == '__main__':
 
         experiment.visualize_pcdag(true_DAG, pos=shared_pos, title="true DAG")
 
-        """
+        
         #P1
         true_DAG, DAG = experiment.random_dag_from_pcdag(pcdag) #gets random graph from MEC(s)
         data = dg.generate_data(graph = DAG, random_seed=47, num_rows=20000)
@@ -227,13 +229,13 @@ if __name__ == '__main__':
 
         test_mat, test_dag = experiment.rand_subsam_w_rep(cpdag = pcdag, num_nodes=4)
         experiment.visualize_pcdag(adj_matrix=test_mat, pos=shared_pos)
-        #end p1
-        """
+        #""end p1
+        
         sample_subgraphs = experiment.rand_subsam_w_rep(cpdag = pcdag)
 
         for subgraph in sample_subgraphs:
             print(len(subgraph))
             experiment.visualize_pcdag(subgraph, pos=shared_pos, title="true DAG")
-
+        """
 
     
