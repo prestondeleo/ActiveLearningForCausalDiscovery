@@ -120,15 +120,17 @@ class Experiment:
                 G.remove_edge(u, v)
                 G.add_edge(v, u)
         return nx.to_numpy_array(G), G
-#def rand_subsam_w_rep(self, cpdag:np.ndarray,  num_nodes:int, min_perc_samp = 0.25, max_perc_samp = 0.9)    
-    def rand_subsam_w_rep(self, cpdag:np.ndarray)->np.ndarray:
-        #We start with the cpdag
+            #We start with the cpdag
         #we remove all teh undirected edges
         # we are left with a DAG now
         #We make subgraphs from this new DAG
         # we unorient edges in subgraphs and make this training data i.e. sunbgraph with some undirected edges and the DAG subgraph
 
         #asfter this training we try to infer the original PCDAG and make a DAG
+
+
+#def rand_subsam_w_rep(self, cpdag:np.ndarray,  num_nodes:int, min_perc_samp = 0.25, max_perc_samp = 0.9)    
+    def rand_subsam_w_rep(self, cpdag:np.ndarray)->np.ndarray:
 
 
 
@@ -152,11 +154,15 @@ class Experiment:
 
         while successful_draws != subset_size:
             subset_size_graph = np.random.randint(2,  len(edges) + 1)
-            sampled_edges = random.choices(edges, k=subset_size_graph)#This might be doing with replacement
-                            
+            #sampled_edges = random.choices(edges, k=subset_size_graph)#This might be doing with replacement
+            sampled_edge_indices = np.random.choice(len(edges), size=subset_size_graph, replace=False)
+            sampled_edges = [edges[i] for i in sampled_edge_indices]
+
             subgraph = nx.DiGraph()
+            subgraph.add_nodes_from(G.nodes())
             subgraph.add_edges_from(sampled_edges)
             subgraph_num_isolated_nodes = nx.number_of_isolates(subgraph)
+            
             if subgraph_num_isolated_nodes != original_num_isolated_nodes: #maybe its okay to have less nodes in subgraph
                 print(subgraph_num_isolated_nodes)
                 print(original_num_isolated_nodes)
@@ -192,10 +198,15 @@ class Experiment:
 if __name__ == '__main__':
         np.random.seed(seed = 47)  
         random.seed(47)
-        G = dg.create_dag(n = 20, expected_degree = 3)
+        G = dg.create_dag(n = 20, expected_degree = 1)
         start_adj_matrix = nx.to_numpy_array(G)        
         pcdag = pc_a.pc(G)
         experiment = Experiment(5, 5)
+        shared_pos = experiment.visualize_pcdag(pcdag, title="PCDAG")
+        true_DAG, DAG = experiment.random_dag_from_pcdag(pcdag) #gets random graph from MEC(s)
+
+        experiment.visualize_pcdag(true_DAG, pos=shared_pos, title="true DAG")
+
         """
         #P1
         true_DAG, DAG = experiment.random_dag_from_pcdag(pcdag) #gets random graph from MEC(s)
@@ -219,5 +230,10 @@ if __name__ == '__main__':
         #end p1
         """
         sample_subgraphs = experiment.rand_subsam_w_rep(cpdag = pcdag)
+
+        for subgraph in sample_subgraphs:
+            print(len(subgraph))
+            experiment.visualize_pcdag(subgraph, pos=shared_pos, title="true DAG")
+
 
     
