@@ -127,10 +127,3 @@ def select_random_subgraph_from(A, k):
 
     return A[np.ix_(selected_nodes, selected_nodes)], selected_nodes
 
-expected_matrix = np.array([[0, 0, 1, 0, 0],
-                                    [0, 0, 1, 0, 0],
-                                    [0, 0, 0, 1, 1],
-                                    [0, 0, 0, 0, 0],
-                                    [0, 0, 0, 0, 0]])
-
-print(select_random_subgraph_from(expected_matrix, 3))
