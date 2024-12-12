@@ -2,6 +2,7 @@ from typing import List, Any
 
 from numpy import ndarray, dtype
 
+import data_generation
 import data_generation as dg
 import pc_algorithm as pc_a
 import networkx as nx
@@ -137,15 +138,16 @@ class Experiment:
     def rand_subsam_w_rep(self, cpdag:np.ndarray)-> list[ndarray[Any, dtype[Any]]]:
 
 
-
         num_nodes = self.get_num_nodes(cpdag)
         #np.random.seed(seed = 47)  
         #random.seed(47)
-        G = nx.DiGraph(cpdag)
+
+        G = nx.from_numpy_array(cpdag, create_using = nx.DiGraph)
         undirected_edges = [(i, j) for i, j in G.edges if G.has_edge(j, i) and i<j]
         for u, v in undirected_edges:
-            if G.has_edge(v, u):
-                G.remove_edge(v, u)
+            G.remove_edge(v, u)
+            G.remove_edge(u, v)
+
 
         original_num_isolated_nodes = nx.number_of_isolates(G)
         edges = list(G.edges)
@@ -179,13 +181,9 @@ class Experiment:
                 print(successful_draws)
 
         return subgraphs
-    
-    def model_train_data(self, cpdag:np.ndarray)->tuple:
-        pass
 
-
-
-        #sample size would be number of nodes. 
+    def model_train_data(self, cpdag:np.ndarray) -> tuple[list[np.ndarray], list[np.ndarray]]:
+        #sample size would be number of nodes.
         #could be called subset size
         """
 
@@ -200,6 +198,13 @@ class Experiment:
         subgraph_adjmatrix = cpdag.ix_(sampled_indices,sampled_indices)
         """
         #return subgraph_adjmatrix
+
+        experiment = Experiment(5, 5)
+        rand_subsam_matrices = experiment.rand_subsam_w_rep(cpdag)
+
+        pc_matrices = [pc_a.pc(nx.from_numpy_array(matrix, create_using=nx.DiGraph)) for matrix in rand_subsam_matrices]
+
+        return pc_matrices, rand_subsam_matrices
 
 """
 if __name__ == '__main__':
@@ -243,4 +248,26 @@ if __name__ == '__main__':
             experiment.visualize_pcdag(subgraph, pos=shared_pos, title="true DAG")
         """
 
-    
+if __name__ == '__main__':
+    np.random.seed(seed=47)
+    random.seed(47)
+    G = dg.create_dag(n=20, expected_degree=1)
+    start_adj_matrix = nx.to_numpy_array(G)
+    pcdag = pc_a.pc(G)
+
+    experiment = Experiment(5, 5)
+    shared_pos = experiment.visualize_pcdag(pcdag, title="PCDAG")
+    true_DAG, DAG = experiment.random_dag_from_pcdag(pcdag)  # gets random graph from MEC(s)
+
+
+    sample_subgraphs = experiment.rand_subsam_w_rep(cpdag=pcdag)
+
+    for subgraph in sample_subgraphs:
+        #print(len(subgraph))
+        print("subgraph: ")
+        experiment.visualize_pcdag(subgraph, pos=shared_pos, title="true DAG")
+
+        subgraph_pc = pc_a.pc(nx.from_numpy_array(subgraph, create_using = nx.DiGraph))
+
+        print("subgraph pc: ")
+        experiment.visualize_pcdag(subgraph_pc, pos=shared_pos, title="pc of subgraph")
