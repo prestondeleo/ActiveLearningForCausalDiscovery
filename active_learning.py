@@ -1,3 +1,7 @@
+from typing import List, Any
+
+from numpy import ndarray, dtype
+
 import data_generation as dg
 import pc_algorithm as pc_a
 import networkx as nx
@@ -101,8 +105,9 @@ class Experiment:
         np.random.seed(seed = 47)  
         random.seed(47)
         G = nx.DiGraph(pcdag_matrix)
-        
-        undirected_edges = [(i, j) for i, j in G.edges if G.has_edge(j, i)]
+
+        # adds i<j so that we only include each undirected edge once
+        undirected_edges = [(i, j) for i, j in G.edges if G.has_edge(j, i) and i<j]
         
         for u, v in undirected_edges:
             if G.has_edge(v, u):
@@ -129,7 +134,7 @@ class Experiment:
 
 
 #def rand_subsam_w_rep(self, cpdag:np.ndarray,  num_nodes:int, min_perc_samp = 0.25, max_perc_samp = 0.9)    
-    def rand_subsam_w_rep(self, cpdag:np.ndarray)->np.ndarray:
+    def rand_subsam_w_rep(self, cpdag:np.ndarray)-> list[ndarray[Any, dtype[Any]]]:
 
 
 
@@ -137,16 +142,16 @@ class Experiment:
         #np.random.seed(seed = 47)  
         #random.seed(47)
         G = nx.DiGraph(cpdag)
-        undirected_edges = [(i, j) for i, j in G.edges if G.has_edge(j, i)]
+        undirected_edges = [(i, j) for i, j in G.edges if G.has_edge(j, i) and i<j]
         for u, v in undirected_edges:
             if G.has_edge(v, u):
                 G.remove_edge(v, u)
 
         original_num_isolated_nodes = nx.number_of_isolates(G)
         edges = list(G.edges)
-        print('edges')
-        print(len(edges))
-        print(original_num_isolated_nodes)
+        #print('edges')
+        #print(len(edges))
+        #print(original_num_isolated_nodes)
         subgraphs = []
         subset_size = np.random.randint(2,  len(edges) + 1)
         successful_draws = 0
