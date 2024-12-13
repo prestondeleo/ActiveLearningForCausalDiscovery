@@ -17,6 +17,7 @@ from scipy import stats
 import graph_conv as gr
 import torch
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 
 class Experiment:
     def __init__(self, num_models:int, k:int)-> None:
@@ -141,12 +142,16 @@ class Experiment:
                 choice = random.randint(1,2)
                 if choice==1:
                     G.add_edge(u, v)
+                    if not nx.is_directed_acyclic_graph(G):
+                        G.remove_edge(u, v)
+                        G.add_edge(v, u)
                 else:
                     G.add_edge(v, u)
+                    if not nx.is_directed_acyclic_graph(G):
+                        G.remove_edge(v, u)
+                        G.add_edge(u, v)
             
-            if not nx.is_directed_acyclic_graph(G):
-                G.remove_edge(u, v)
-                G.add_edge(v, u)
+
         return nx.to_numpy_array(G), G
             #We start with the cpdag
         #we remove all teh undirected edges
@@ -193,15 +198,14 @@ class Experiment:
             subgraph_num_isolated_nodes = nx.number_of_isolates(subgraph)
             
             if subgraph_num_isolated_nodes != original_num_isolated_nodes: #maybe its okay to have less nodes in subgraph
-                print(subgraph_num_isolated_nodes)
-                print(original_num_isolated_nodes)
+               #print(subgraph_num_isolated_nodes)
+                #print(original_num_isolated_nodes)
                 continue
                 
             else:
                 subgraph_adj_matrix = nx.to_numpy_array(subgraph, nodelist=range(num_nodes))  # Maintain node index consistency
                 subgraphs.append(subgraph_adj_matrix)
                 successful_draws += 1
-                print(successful_draws)
 
         return subgraphs
 
@@ -247,7 +251,7 @@ class Experiment:
                 updated_pcdag = self.unary_discovery(interv_node=node, true_causal_graph=true_causal_graph, pcdag=updated_pcdag, data = data)
                 hamming_distances.append(self.hamming_distance(updated_pcdag, true_causal_dag))
                 num_interv_ran += 1
-        return hamming_distances, num_interv_ran,sampled_edge_indices
+        return hamming_distances, num_interv_ran
     
     def get_unoriented_nodes(self, pcdag: np.ndarray) -> np.ndarray:
         unoriented_nodes = []
@@ -271,7 +275,7 @@ class Experiment:
                 updated_pcdag = self.unary_discovery(interv_node=node, true_causal_graph=true_causal_graph, pcdag=updated_pcdag, data = data)
                 hamming_distances.append(self.hamming_distance(updated_pcdag, true_causal_dag))
                 num_interv_ran += 1
-        return hamming_distances, num_interv_ran, sampled_edge_indices
+        return hamming_distances, num_interv_ran
     
     def get_trainloader(self, pcdag:np.ndarray):
         trainloader = []
@@ -394,7 +398,7 @@ class Experiment:
 
         #    pass
 
-    def qbc(self, epochs:int, committee_size:int, pcdag:np.ndarray, true_causal_dag:np.ndarray, true_causal_graph:nx.DiGraph, data:pd.DataFrame, k:int, _lambda:int):
+    def qbc(self, epochs:int, committee_size:int, pcdag:np.ndarray, true_causal_dag:np.ndarray, true_causal_graph:nx.DiGraph, data:pd.DataFrame, k:int, _lambda:float):
             hamming_distances = []
             num_interv_ran = 0
             pcdag = pcdag.copy()
@@ -432,9 +436,79 @@ class Experiment:
                 num_interv_ran += 1
             return hamming_distances, num_interv_ran
 
+    # remember to change committee size
+    def get_metrics(self, size: int):
+        G = dg.create_dag(n=size, expected_degree=3)
+        pcdag = pc_a.pc(G)
+        experiment = Experiment(5, 5)
 
-    def optimal_experimental_deisgn(self):
-        pass
+        true_DAG, DAG = experiment.random_dag_from_pcdag(pcdag)
+
+        qbc_hamming, qbc_num_interv = experiment.qbc(
+            epochs=10, committee_size=5, pcdag=pcdag,
+            true_causal_dag=true_DAG, true_causal_graph=DAG,
+            data=dg.generate_data(DAG), k=size, _lambda=0.5
+        )
+
+        rand_hamming, rand_num_interv = experiment.random_design(
+            pcdag=pcdag, true_causal_graph=DAG,
+            true_causal_dag=true_DAG, data=dg.generate_data(DAG), k=size
+        )
+
+        rand_adv_hamming, rand_adv_num_interv = experiment.random_adv_design(
+            pcdag=pcdag, true_causal_graph=DAG,
+            true_causal_dag=true_DAG, data=dg.generate_data(DAG), k=size
+        )
+
+        return qbc_hamming, qbc_num_interv, rand_hamming, rand_num_interv, rand_adv_hamming, rand_adv_num_interv
+
+    # over some amount of tries, gets average hamming distance, number of interventions for a given graph size (# vertices)
+    def get_average_metrics(self, size: int):
+        # Use ThreadPoolExecutor for parallel processing
+        with ThreadPoolExecutor() as executor:
+            results = list(executor.map(
+                lambda _: self.get_metrics(size),
+                range(3)
+            ))
+
+        # Unpack the results
+        qbc_hammings, qbc_num_intervs, rand_hammings, rand_num_intervs, rand_adv_hammings, rand_adv_num_intervs = zip(
+            *results)
+
+        # Compute the means and return
+        return (
+            np.mean(qbc_hammings),
+            np.mean(qbc_num_intervs),
+            np.mean(rand_hammings),
+            np.mean(rand_num_intervs),
+            np.mean(rand_adv_hammings),
+            np.mean(rand_adv_num_intervs)
+        )
+
+    # compares average hamming distance and average number of interventions for the 3 models
+    def performance_comparison(self, num_nodes: list[int]):
+        with ThreadPoolExecutor() as executor:
+            results = list(executor.map(self.get_average_metrics, num_nodes))
+
+        data = [
+            [size] + list(metrics)
+            for size, metrics in zip(num_nodes, results)
+        ]
+
+
+        df = pd.DataFrame(data, columns=[
+            "num_nodes",
+            "qbc_hammings_means",
+            "qbc_num_intervs_means",
+            "rand_hammings_means",
+            "rand_num_intervs_means",
+            "rand_adv_hammings_means",
+            "rand_adv_num_intervs_means"
+        ])
+        return df
+
+
+
 
 if __name__ == '__main__':
     np.random.seed(seed=47)
