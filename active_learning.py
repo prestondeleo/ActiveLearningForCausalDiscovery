@@ -315,9 +315,18 @@ class Experiment:
                 prediction = member.predict_pcdag(pcdag = pcdag)
                 predictions.append(prediction)
 
+            # if committe DAG is right than break and no more interventions
+
             committee_pcdag = self.majority_vote(predictions = predictions)
+
+            #add statistics here 
+
             maximal_disagreed_node = self.get_maximal_disagreement([0])
+
             updated_pcdag = self.unary_discovery(interv_node = maximal_disagreed_node, true_causal_graph = true_causal_graph, pcdag = pcdag, data = data)
+
+            #add statistics here 
+
             pcdag = updated_pcdag
         
 
