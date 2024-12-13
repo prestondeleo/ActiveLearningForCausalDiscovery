@@ -132,11 +132,11 @@ def performance_comparison(num_nodes: list[int], num_iterations: int, committee_
 def save_performance_info(num_nodes: list[int], num_iterations: int, committee_size: int, epochs: int):
     df1 = performance_comparison(num_nodes, num_iterations, committee_size, epochs)[0]
     df1.to_csv(f'performance_comp_{num_nodes}_nodes_{num_iterations}_iterations_{committee_size}_committee_'
-              f'{epochs}_epochs')
+              f'{epochs}_epochs.csv')
 
     df2 = performance_comparison(num_nodes, num_iterations, committee_size, epochs)[1]
     df2.to_csv(f'time_comp_{num_nodes}_nodes_{num_iterations}_iterations_{committee_size}_committee_'
-               f'{epochs}_epochs')
+               f'{epochs}_epochs.csv')
 
 def plot(num_nodes: list[int], num_iterations: int, committee_size: int, epochs: int):
     df = performance_comparison(num_nodes, num_iterations, committee_size, epochs)[0]
@@ -153,4 +153,4 @@ def plot(num_nodes: list[int], num_iterations: int, committee_size: int, epochs:
 
     plt.show()
 
-plot([10], 3, 1, 1)
+#save_performance_info([10], 1, 1, 1)
