@@ -418,23 +418,28 @@ class Experiment:
 
                 # if committe DAG is right than break and no more interventions
                 committee_pcdag = self.majority_vote(predictions = predictions)
-                hamming_distances.append(self.hamming_distance(updated_pcdag, true_causal_dag=true_causal_dag))
-                if committee_pcdag == true_causal_dag:
+                hamming_distances.append(self.hamming_distance(committee_pcdag, true_causal_dag=true_causal_dag))
+                comparison = committee_pcdag == true_causal_dag
+                #if committee_pcdag == true_causal_dag:
+                if comparison.all():
                     break
                 #add statistics here 
                 maximal_disagreed_node = self.get_maximal_disagreement(predictions = predictions)
                 updated_pcdag = self.unary_discovery(interv_node = maximal_disagreed_node, true_causal_graph = true_causal_graph, pcdag = pcdag, data = data)
                 #add statistics here 
-                pcdag = updated_pcdag
+                pcdag = updated_pcdag.copy()
 
                 num_interv_ran += 1
             return hamming_distances, num_interv_ran
 
 
+    def optimal_experimental_deisgn(self):
+        pass
+
 if __name__ == '__main__':
     np.random.seed(seed=47)
     random.seed(47)
-    G = dg.create_dag(n=20, expected_degree=1)
+    G = dg.create_dag(n=100, expected_degree=4)
     start_adj_matrix = nx.to_numpy_array(G)
     pcdag = pc_a.pc(G)
 
@@ -442,7 +447,13 @@ if __name__ == '__main__':
     shared_pos = experiment.visualize_pcdag(pcdag, title="PCDAG")
     
     true_DAG, DAG = experiment.random_dag_from_pcdag(pcdag) 
-    hamming_distances, num_interv_ran = experiment.qbc(epochs = 1, committee_size = 3, pcdag = pcdag, true_causal_dag=true_DAG, true_causal_graph = DAG, data = dg.generate_data(DAG), k = 1, _lambda = 0.5)    #hamming, num, sampled_edge_indices = experiment.random_adv_design(pcdag = pcdag, true_causal_graph = DAG, true_causal_dag = true_DAG, data = dg.generate_data(graph = DAG), k = 10)
+    hamming_distances, num_interv_ran = experiment.qbc(epochs = 1, committee_size = 3, pcdag = pcdag, true_causal_dag=true_DAG, true_causal_graph = DAG, data = dg.generate_data(DAG), k = 100, _lambda = 0.5) 
+    print(hamming_distances)
+    print(num_interv_ran)
+
+
+
+    #hamming, num, sampled_edge_indices = experiment.random_adv_design(pcdag = pcdag, true_causal_graph = DAG, true_causal_dag = true_DAG, data = dg.generate_data(graph = DAG), k = 10)
     #print(hamming)
     #print(num)
     #print(sampled_edge_indices)
