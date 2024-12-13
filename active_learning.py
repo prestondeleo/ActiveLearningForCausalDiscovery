@@ -79,6 +79,22 @@ class Experiment:
 
                         new_pcdag = self.discovery(pcdag=new_pcdag.copy(), interv_data = interv_data, neighbor_interv_data = neighbor_interv_data, interv_node=interv_node, neighbor=neighbor)
         return new_pcdag
+    
+    def unary_discovery(self, interv_node:int, true_causal_graph: nx.DiGraph, pcdag:np.ndarray, data:pd.DataFrame)->np.ndarray:
+        new_pcdag = pcdag.copy()
+        interv_data = self.intervene(true_causal_graph, data, interv_node)
+        neighbors = self.get_neighbors(pcdag, interv_node)
+
+        for neighbor in neighbors:
+            neighbor_interv_data = self.intervene(true_causal_graph, data, neighbor)
+
+            if pcdag[interv_node, neighbor] == 1 and  pcdag[neighbor, interv_node] == 1:
+
+                new_pcdag = self.discovery(pcdag=new_pcdag.copy(), interv_data = interv_data, neighbor_interv_data = neighbor_interv_data, interv_node=interv_node, neighbor=neighbor)
+        return new_pcdag
+    
+
+
 
     def visualize_pcdag(self, adj_matrix: np.ndarray, pos=None, title="Generated Graph", figsize=(10, 8)):
 
@@ -182,7 +198,7 @@ class Experiment:
 
         return subgraphs
 
-    def model_train_data(self, cpdag:np.ndarray) -> tuple[list[np.ndarray], list[np.ndarray]]:
+    def model_train_data(self, cpdag:np.ndarray):
         #sample size would be number of nodes.
         #could be called subset size
         """
@@ -206,47 +222,50 @@ class Experiment:
 
         return pc_matrices, rand_subsam_matrices
 
-"""
-if __name__ == '__main__':
-        np.random.seed(seed = 47)  
-        random.seed(47)
-        G = dg.create_dag(n = 20, expected_degree = 1)
-        start_adj_matrix = nx.to_numpy_array(G)        
-        pcdag = pc_a.pc(G)
-        experiment = Experiment(5, 5)
-        shared_pos = experiment.visualize_pcdag(pcdag, title="PCDAG")
-        true_DAG, DAG = experiment.random_dag_from_pcdag(pcdag) #gets random graph from MEC(s)
+    def hamming_distance(self, pcdag:np.ndarray, true_causal_dag:np.ndarray):
+        distance = np.sum((pcdag == 0) & (true_causal_dag == 1)) + np.sum((pcdag == 1) & (true_causal_dag == 0))
+        return distance
 
-        experiment.visualize_pcdag(true_DAG, pos=shared_pos, title="true DAG")
+    def random_design(self, pcdag:np.ndarray, true_causal_graph:nx.DiGraph, true_causal_dag:np.ndarray, data:pd.DataFrame, k:int):
+        sampled_edge_indices = np.random.choice(self.get_num_nodes(pcdag), size=k, replace=False)
+        hamming_distances = []
+        num_interv_identif = 0
+        updated_pcdag = pcdag.copy()
+        for i, node in enumerate(sampled_edge_indices):
+            if self.hamming_distance(updated_pcdag, true_causal_dag) == 0:
+                hamming_distances.append(self.hamming_distance(updated_pcdag, true_causal_dag))
+                num_interv_identif += 1
+                break
+            else:
+                updated_pcdag = self.unary_discovery(interv_node=node, true_causal_graph=true_causal_graph, pcdag=updated_pcdag, data = data)
+                hamming_distances.append(self.hamming_distance(updated_pcdag, true_causal_dag))
+                num_interv_identif += 1
+        return hamming_distances, num_interv_identif,sampled_edge_indices
+    
+    def get_unoriented_nodes(self, pcdag: np.ndarray) -> np.ndarray:
+        unoriented_nodes = []
+        for i in range(pcdag.shape[0]):
+            if any(pcdag[i, :] == 1) and any(pcdag[:, i] == 1):  # Adjust condition based on edge encoding
+                unoriented_nodes.append(i)
+        return np.array(unoriented_nodes)
 
-        
-        #P1
-        true_DAG, DAG = experiment.random_dag_from_pcdag(pcdag) #gets random graph from MEC(s)
-        data = dg.generate_data(graph = DAG, random_seed=47, num_rows=20000)
-
-        shared_pos = experiment.visualize_pcdag(pcdag, title="PCDAG")
-
-        experiment.visualize_pcdag(true_DAG, pos=shared_pos, title="true DAG")
-
-        #print([int(child) for child in DAG.successors(8)])
-
-        #intervened_data = experiment.intervene(DAG, data, 8)
-        #print(intervened_data.to_string())
-
-        predicted_adj_matrix = experiment.total_full_discovery(true_causal_graph = DAG, pcdag=pcdag, data=data)
-
-        experiment.visualize_pcdag(predicted_adj_matrix, pos=shared_pos, title="predicted DAG")
-
-        test_mat, test_dag = experiment.rand_subsam_w_rep(cpdag = pcdag, num_nodes=4)
-        experiment.visualize_pcdag(adj_matrix=test_mat, pos=shared_pos)
-        #""end p1
-        
-        sample_subgraphs = experiment.rand_subsam_w_rep(cpdag = pcdag)
-
-        for subgraph in sample_subgraphs:
-            print(len(subgraph))
-            experiment.visualize_pcdag(subgraph, pos=shared_pos, title="true DAG")
-        """
+    def random_adv_design(self, pcdag:np.ndarray, true_causal_graph:nx.DiGraph, true_causal_dag:np.ndarray, data:pd.DataFrame, k:int):
+        unoriented_nodes = self.get_unoriented_nodes(pcdag)
+        sampled_edge_indices = np.random.choice(unoriented_nodes, size=k, replace=False)
+        hamming_distances = []
+        num_interv_identif = 0
+        updated_pcdag = pcdag.copy()
+        for i, node in enumerate(sampled_edge_indices):
+            if self.hamming_distance(updated_pcdag, true_causal_dag) == 0:
+                hamming_distances.append(self.hamming_distance(updated_pcdag, true_causal_dag))
+                num_interv_identif += 1
+                break
+            else:
+                updated_pcdag = self.unary_discovery(interv_node=node, true_causal_graph=true_causal_graph, pcdag=updated_pcdag, data = data)
+                hamming_distances.append(self.hamming_distance(updated_pcdag, true_causal_dag))
+                num_interv_identif += 1
+        return hamming_distances, num_interv_identif,sampled_edge_indices
+    
 
 if __name__ == '__main__':
     np.random.seed(seed=47)
@@ -258,7 +277,13 @@ if __name__ == '__main__':
     experiment = Experiment(5, 5)
     shared_pos = experiment.visualize_pcdag(pcdag, title="PCDAG")
     true_DAG, DAG = experiment.random_dag_from_pcdag(pcdag)  # gets random graph from MEC(s)
+    hamming, num, sampled_edge_indices = experiment.random_adv_design(pcdag = pcdag, true_causal_graph = DAG, true_causal_dag = true_DAG, data = dg.generate_data(graph = DAG), k = 10)
+    print(hamming)
+    print(num)
+    print(sampled_edge_indices)
 
+
+"""
 
     sample_subgraphs = experiment.rand_subsam_w_rep(cpdag=pcdag)
 
@@ -271,3 +296,27 @@ if __name__ == '__main__':
 
         print("subgraph pc: ")
         experiment.visualize_pcdag(subgraph_pc, pos=shared_pos, title="pc of subgraph")
+
+np.random.seed(seed=47)
+random.seed(47)
+G = dg.create_dag(n=10, expected_degree=1)
+start_adj_matrix = nx.to_numpy_array(G)
+pcdag = pc_a.pc(G)
+experiment = Experiment(5, 5)
+shared_pos = experiment.visualize_pcdag(pcdag, title="PCDAG")
+true_DAG, DAG = experiment.random_dag_from_pcdag(pcdag)  # gets random graph from MEC(s)
+
+
+sample_subgraphs = experiment.rand_subsam_w_rep(cpdag=pcdag)
+
+for subgraph in sample_subgraphs:
+    #print(len(subgraph))
+    print("subgraph: ")
+    experiment.visualize_pcdag(subgraph, pos=shared_pos, title="true DAG")
+
+    subgraph_pc = pc_a.pc(nx.from_numpy_array(subgraph, create_using = nx.DiGraph))
+
+    print("subgraph pc: ")
+    experiment.visualize_pcdag(subgraph_pc, pos=shared_pos, title="pc of subgraph")
+    print(subgraph_pc)
+"""
