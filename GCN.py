@@ -79,10 +79,16 @@ class GCN(nn.Module):
 if __name__ == '__main__':
     np.random.seed(seed = 47)  
     random.seed(47)
-    G = dg.create_dag(n = 20, expected_degree = 10)
-    start_adj_matrix = nx.to_numpy_array(G)        
-    pcdag = pc_a.pc(G)
+    G = dg.create_dag(n = 5, expected_degree = 2)
+
     experiment = al.Experiment(5, 5)
+    print("Original graph: ")
+    experiment.visualize_pcdag(nx.adjacency_matrix(G))
+
+
+    start_adj_matrix = nx.to_numpy_array(G)
+    pcdag = pc_a.pc(G)
+    # experiment = al.Experiment(5, 5)
     shared_pos = experiment.visualize_pcdag(pcdag, title="PCDAG")
     true_DAG, DAG = experiment.random_dag_from_pcdag(pcdag) #gets random graph from MEC(s)
     experiment.visualize_pcdag(true_DAG, pos=shared_pos, title="true DAG")

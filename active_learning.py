@@ -171,11 +171,11 @@ class Experiment:
         #print(len(edges))
         #print(original_num_isolated_nodes)
         subgraphs = []
-        subset_size = np.random.randint(2,  len(edges) + 1)
+        subset_size = np.random.randint(1,  len(edges) + 1)
         successful_draws = 0
 
         while successful_draws != subset_size:
-            subset_size_graph = np.random.randint(2,  len(edges) + 1)
+            subset_size_graph = np.random.randint(1,  len(edges) + 1)
             #sampled_edges = random.choices(edges, k=subset_size_graph)#This might be doing with replacement
             sampled_edge_indices = np.random.choice(len(edges), size=subset_size_graph, replace=False)
             sampled_edges = [edges[i] for i in sampled_edge_indices]

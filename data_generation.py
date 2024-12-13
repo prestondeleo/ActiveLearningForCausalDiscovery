@@ -11,38 +11,51 @@ def create_dag(n: int, expected_degree: int) -> nx.DiGraph:
     # creates random spanning tree
     undirected_graph = nx.random_labeled_tree(n)
 
-    dag = nx.DiGraph()
-    dag.add_nodes_from(undirected_graph.nodes)
+    DAG = nx.DiGraph()
+    DAG.add_nodes_from(undirected_graph.nodes)
 
-    # randomly assigns directions to spanning tree edges
-    for u, v in undirected_graph.edges():
-        if random.choice([True, False]):
-            dag.add_edge(u, v)
-            # reverses direction if adding edge creates a cycle
-            if not nx.is_directed_acyclic_graph(dag):
-                dag.remove_edge(u, v)
-                dag.add_edge(v, u)
-        else:
-            dag.add_edge(v, u)
-            if not nx.is_directed_acyclic_graph(dag):
-                dag.remove_edge(v, u)
-                dag.add_edge(u, v)
+    # creates immorality w/ 3 randomly selected nodes
+    nodes = list(undirected_graph.nodes)
+    random.shuffle(nodes)
+    a, b, c = nodes[:3]
+    DAG.add_edge(a, b)
+    DAG.add_edge(c, b)
+
+    # excludes these edges to preserve immorality and acyclicity
+    excluded_edges = {(a, c), (c, a), (b, a), (b, c)}
 
     max_edges = n * (n - 1) // 2  # max number of possible edges in a DAG
     num_edges = min(expected_degree * n / 2, max_edges)
 
-    possible_edges = [(i, j) for i in range(n) for j in range(n) if i != j and not dag.has_edge(i, j)]
+    # randomly assigns directions to spanning tree edges
+    for u, v in undirected_graph.edges():
+        if DAG.number_of_edges() >= num_edges:
+            break
+        if random.choice([True, False]) and (u,v) not in excluded_edges:
+            DAG.add_edge(u, v)
+            # reverses direction if adding edge creates a cycle
+            if not nx.is_directed_acyclic_graph(DAG):
+                DAG.remove_edge(u, v)
+                DAG.add_edge(v, u)
+        elif (v,u) not in excluded_edges:
+            DAG.add_edge(v, u)
+            if not nx.is_directed_acyclic_graph(DAG):
+                DAG.remove_edge(v, u)
+                DAG.add_edge(u, v)
+
+    possible_edges = [(i, j) for i in range(n) for j in range(n) if i != j and not DAG.has_edge(i, j)]
+    possible_edges = [edge for edge in possible_edges if edge not in excluded_edges]
     random.shuffle(possible_edges)
 
     # randomly adds additional edges while maintaining acyclicity
     for source, target in possible_edges:
-        if dag.number_of_edges() >= num_edges:
+        if DAG.number_of_edges() >= num_edges:
             break
-        dag.add_edge(source, target)
-        if not nx.is_directed_acyclic_graph(dag):
-            dag.remove_edge(source, target)
+        DAG.add_edge(source, target)
+        if not nx.is_directed_acyclic_graph(DAG):
+            DAG.remove_edge(source, target)
 
-    return dag
+    return DAG
 
 
 def display(graph: nx.DiGraph):

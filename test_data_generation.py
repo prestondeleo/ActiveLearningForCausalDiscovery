@@ -17,6 +17,7 @@ class Test(TestCase):
             assert nx.is_weakly_connected(dag), "Graph is not weakly connected."
             assert dag.number_of_edges() == n * expected_degree / 2, "Graph has incorrect edge count."
             assert nx.number_of_selfloops(dag) == 0, "There are self loops."
+            assert nx.compute_v_structures(dag), "There are no immoralities."
 
         assert_properties(data_generation.create_dag(5, 2), 5, 2)
         assert_properties(data_generation.create_dag(10, 4), 10, 4)
