@@ -251,7 +251,7 @@ class Experiment:
 
     def random_adv_design(self, pcdag:np.ndarray, true_causal_graph:nx.DiGraph, true_causal_dag:np.ndarray, data:pd.DataFrame, k:int):
         unoriented_nodes = self.get_unoriented_nodes(pcdag)
-        sampled_edge_indices = np.random.choice(unoriented_nodes, size=k, replace=False)
+        sampled_edge_indices = np.random.choice(unoriented_nodes, size=min(k, len(unoriented_nodes)), replace=False)
         hamming_distances = []
         num_interv_ran = 0
         updated_pcdag = pcdag.copy()
