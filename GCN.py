@@ -76,19 +76,17 @@ class GCN(nn.Module):
 
             print(f"Epoch {epoch + 1}, Total Loss: {total_loss}")
 
+    def predict_pcdag(self, pcdag:np.ndarray)->np.ndarray:
+        predicted_dag = self.forward(pcdag)
+        return predicted_dag, (predicted_dag > 0.5).int()
+
 if __name__ == '__main__':
     np.random.seed(seed = 47)  
     random.seed(47)
-    G = dg.create_dag(n = 5, expected_degree = 2)
-
-    experiment = al.Experiment(5, 5)
-    print("Original graph: ")
-    experiment.visualize_pcdag(nx.adjacency_matrix(G))
-
-
-    start_adj_matrix = nx.to_numpy_array(G)
+    G = dg.create_dag(n = 10, expected_degree = 2)
+    start_adj_matrix = nx.to_numpy_array(G)        
     pcdag = pc_a.pc(G)
-    # experiment = al.Experiment(5, 5)
+    experiment = al.Experiment(5, 5)
     shared_pos = experiment.visualize_pcdag(pcdag, title="PCDAG")
     true_DAG, DAG = experiment.random_dag_from_pcdag(pcdag) #gets random graph from MEC(s)
     experiment.visualize_pcdag(true_DAG, pos=shared_pos, title="true DAG")
@@ -103,4 +101,8 @@ if __name__ == '__main__':
         trainloader.append((x, y))
     optimizer = optim.Adam(model.parameters(), lr=0.01)
     results = model.run_train(epochs = 10, optimizer = optimizer, dataloader=trainloader, _lambda = 0.5)
+    predicted_dag, useful_predicted_dag = model.predict_pcdag(pcdag)
+    #print((predicted_dag))
+    #print((predicted_dag > 0.5).int())
+    #experiment.visualize_pcdag((predicted_dag > 0.5).int(), pos=shared_pos, title="predicted DAG")
 

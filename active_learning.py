@@ -1,6 +1,7 @@
 from typing import List, Any
 
 from numpy import ndarray, dtype
+import torch.optim as optim
 
 import data_generation
 import data_generation as dg
@@ -13,7 +14,8 @@ import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 from causallearn.utils.GraphUtils import GraphUtils
 from scipy import stats
-
+import GCN
+import torch
 class Experiment:
     def __init__(self, num_models:int, k:int)-> None:
         self.num_models = num_models
@@ -266,17 +268,36 @@ class Experiment:
                 num_interv_ran += 1
         return hamming_distances, num_interv_ran,sampled_edge_indices
     
+    def get_trainloader(self, pcdag:np.ndarray):
+        trainloader = []
+        pc_matrices, rand_subsam_matrices = self.model_train_data(cpdag = pcdag)
+        for x, y in zip(pc_matrices, rand_subsam_matrices):
+            if not isinstance(x, torch.Tensor):
+                x = torch.tensor(x, dtype=torch.float32, requires_grad=True)
+            if not isinstance(y, torch.Tensor):
+                y = torch.tensor(y, dtype=torch.float32)
+            trainloader.append((x, y))
+        return trainloader
+
+    def qbc(self, epochs:int, committee_size:int, pcdag:np.ndarray, true_causal_dag:np.ndarray, k:int):
+        committtee = [GCN(len(pcdag)) for member in range(committee_size)]
+        optimizers = [optim.Adam(model.parameters(), lr=0.01) for model in committtee]
+        trainloaders = [self.get_trainloader(pcdag = pcdag) for member in range(committee_size)]
+        for epoch in epochs:
+            committee_results = None
 
 
-    def qbc(self, committee:list, k:int):
-        for model in committee:
+
+
+
+        #for model in committee:
             #train all models and predict DAG
-            #choose node with most disagreement
+            #choose node with most disagreement (max entropy)
             #intervene on node
             #retrain models
             #rinse 
 
-            pass
+        #    pass
 
         pass
 
