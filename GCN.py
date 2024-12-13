@@ -78,7 +78,7 @@ class GCN(nn.Module):
 
     def predict_pcdag(self, pcdag:np.ndarray)->np.ndarray:
         predicted_dag = self.forward(pcdag)
-        return predicted_dag, (predicted_dag > 0.5).int()
+        return predicted_dag, (predicted_dag > 0.5).int().numpy()
 
 if __name__ == '__main__':
     np.random.seed(seed = 47)  
@@ -102,6 +102,7 @@ if __name__ == '__main__':
     optimizer = optim.Adam(model.parameters(), lr=0.01)
     results = model.run_train(epochs = 10, optimizer = optimizer, dataloader=trainloader, _lambda = 0.5)
     predicted_dag, useful_predicted_dag = model.predict_pcdag(pcdag)
+    print(useful_predicted_dag)
     #print((predicted_dag))
     #print((predicted_dag > 0.5).int())
     #experiment.visualize_pcdag((predicted_dag > 0.5).int(), pos=shared_pos, title="predicted DAG")

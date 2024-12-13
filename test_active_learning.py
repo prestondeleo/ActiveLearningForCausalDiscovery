@@ -53,3 +53,23 @@ def test_rand_subsam_w_rep():
         nodes_match = set(subsample_graph.nodes).issubset(set(DAG.nodes))
         edges_match = set(subsample_graph.edges).issubset(set(DAG.edges))
         assert nodes_match and edges_match
+
+def test_get_maximal_disagreement():
+    G = data_generation.create_dag(n=10, expected_degree=2)
+    experiment = Experiment(5, 5)
+    pcdag = pc_algorithm.pc(G)
+    shared_pos = experiment.visualize_pcdag(pcdag)
+
+    true_DAG1, DAG1 = experiment.random_dag_from_pcdag(pcdag)
+
+    experiment2 = Experiment(5, 5)
+    true_DAG2, DAG2 = experiment2.random_dag_from_pcdag(pcdag)
+
+    fake_predictions = [true_DAG1, true_DAG2]
+    print(experiment.get_maximal_disagreement(fake_predictions))
+
+    experiment.visualize_pcdag(true_DAG1, pos=shared_pos)
+    experiment.visualize_pcdag(true_DAG2, pos=shared_pos)
+
+    dag_by_vote = experiment.majority_vote(fake_predictions)
+    experiment.visualize_pcdag(dag_by_vote, pos=shared_pos)

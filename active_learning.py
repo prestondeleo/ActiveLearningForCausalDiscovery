@@ -3,6 +3,7 @@ from typing import List, Any
 from numpy import ndarray, dtype
 import torch.optim as optim
 from collections import Counter
+import data_generation
 import data_generation as dg
 import pc_algorithm as pc_a
 import networkx as nx
@@ -13,8 +14,10 @@ import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 from causallearn.utils.GraphUtils import GraphUtils
 from scipy import stats
+import GCN
 import torch
-import graph_conv as gr
+from collections import defaultdict
+
 class Experiment:
     def __init__(self, num_models:int, k:int)-> None:
         self.num_models = num_models
@@ -120,20 +123,23 @@ class Experiment:
         return pos  
 
     def random_dag_from_pcdag(self, pcdag_matrix):
-        np.random.seed(seed = 47)  
-        random.seed(47)
-        G = nx.DiGraph(pcdag_matrix)
+        #np.random.seed(seed = 47)
+        #random.seed(47)
+        G = nx.from_numpy_array(pcdag_matrix, create_using = nx.DiGraph)
 
         # adds i<j so that we only include each undirected edge once
         undirected_edges = [(i, j) for i, j in G.edges if G.has_edge(j, i) and i<j]
-        
+        random.shuffle(undirected_edges)
+
         for u, v in undirected_edges:
             if G.has_edge(v, u):
                 G.remove_edge(v, u)
+                G.remove_edge(u, v)
 
         for u, v in undirected_edges:
             if not G.has_edge(u, v) and not G.has_edge(v, u):
-                if random.choice([True, False]):  
+                choice = random.randint(1,2)
+                if choice==1:
                     G.add_edge(u, v)
                 else:
                     G.add_edge(v, u)
@@ -277,14 +283,67 @@ class Experiment:
                 y = torch.tensor(y, dtype=torch.float32)
             trainloader.append((x, y))
         return trainloader
-    
+
+    # helper for maximal_disagreement
+    def calculate_entropy(self, orientations: List) -> float:
+        # Use Counter to count occurrences of each orientation
+        orientation_counts = Counter(orientations)
+
+        # Calculate the proportions (p_i) for each orientation
+        total_votes = len(orientations)
+        entropy = 0.0 # returns 0 if "orientations" is empty
+        for count in orientation_counts.values():
+            p_i = count / total_votes
+            entropy -= p_i * np.log2(p_i)  # Shannon entropy formula
+
+        return entropy
+
+    # helper for maximal_disagreement
+    def preprocess_orientations(self, adj_matrices: List[np.ndarray]) -> dict:
+        num_models = len(adj_matrices)
+        matrix_dim = len(adj_matrices[0])
+
+        edge_orientations = defaultdict(list)
+
+        for m in range(num_models):
+            for i in range(matrix_dim):
+                for j in range(matrix_dim):
+                    if i == j:
+                        continue  # Skip self-loops
+                    if adj_matrices[m][i][j] == 1.0 and adj_matrices[m][j][i] == 0.0:
+                        edge_orientations[(i, j)].append(1)
+                    elif adj_matrices[m][j][i] == 1.0 and adj_matrices[m][i][j] == 0.0:
+                        edge_orientations[(i, j)].append(0)
+                    else:
+                        pass  # Handle as needed
+
+        return edge_orientations
+
+    # helper for maximal_disagreement
+    def calculate_node_entropy(self, node, edge_orientations):
+        total_entropy = 0.0
+        for (i, j), orientations in edge_orientations.items():
+            if i == node or j == node:  # Consider only edges incident to the node
+                total_entropy += self.calculate_entropy(orientations)
+
+        return total_entropy
+
     #predictions is list of pcdags returns node of most disagreement
-    def get_maximal_disagreement(self, predictions:list)->int:
-        n_nodes = predictions[0].shape[0]
+    def get_maximal_disagreement(self, predictions:list[ndarray])->int:
+        edge_orientations = self.preprocess_orientations(predictions)
 
-        pass
+        num_nodes = len(predictions[0])
 
-    def majority_vote(self, predictions:list)->np.ndarray:
+        # Calculate entropy for each node
+        node_entropies = np.zeros(num_nodes)
+        for node in range(num_nodes):
+            node_entropies[node] = self.calculate_node_entropy(node, edge_orientations)
+
+        # Find the node with the maximum entropy
+        max_entropy_node = np.argmax(node_entropies)
+        return int(max_entropy_node)
+
+    def majority_vote(self, predictions:List[ndarray])->np.ndarray:
         n_nodes = predictions[0].shape[0]
         final_pcdag = np.zeros((n_nodes, n_nodes), dtype=int)
         for i in range(n_nodes):
@@ -296,49 +355,30 @@ class Experiment:
                 final_pcdag[j, i] = most_common_edge[1]
         return final_pcdag
 
-    #def qbc(self, epochs:int, committee_size:int, pcdag:np.ndarray, true_causal_dag:np.ndarray, true_causal_graph:nx.DiGraph, data:pd.DataFrame, k:int, _lambda:int):
     def qbc(self, epochs:int, committee_size:int, pcdag:np.ndarray, true_causal_dag:np.ndarray, true_causal_graph:nx.DiGraph, data:pd.DataFrame, k:int, _lambda:int):
-        hamming_distances = []
-        num_interv_ran = 0
-
-        for interv in range(k):
+        for interv in k:
 
             """
             somewhere in loop need to cjeck if pcdag is now dag and break loop if so
             """
 
-            committee = [gr.GCN(len(pcdag)) for member in range(committee_size)]
+            committee = [GCN(len(pcdag)) for member in range(committee_size)]
             optimizers = [optim.Adam(model.parameters(), lr=0.01) for model in committee]
             trainloaders = [self.get_trainloader(pcdag = pcdag) for member in range(committee_size)]
             #for epoch in epochs:
             #   committee_results = None
             predictions = []
             for i, member in enumerate(committee):
-                member.run_train(epochs, optimizers[i], trainloaders[i], _lambda)
-                _, prediction = member.predict_pcdag(pcdag = pcdag)
+                member.run_train(self, epochs, optimizers[i], trainloaders[i], _lambda)
+                prediction = member.predict_pcdag(pcdag = pcdag)
                 predictions.append(prediction)
 
-            # if committe DAG is right than break and no more interventions
-
             committee_pcdag = self.majority_vote(predictions = predictions)
-            hamming_distances.append(self.hamming_distance(updated_pcdag, true_causal_dag=true_causal_dag))
-
-
-            if committee_pcdag == true_causal_dag:
-                break
-
-
-            #add statistics here 
-
             maximal_disagreed_node = self.get_maximal_disagreement([0])
-
             updated_pcdag = self.unary_discovery(interv_node = maximal_disagreed_node, true_causal_graph = true_causal_graph, pcdag = pcdag, data = data)
-
-            #add statistics here 
-
             pcdag = updated_pcdag
         
-            num_interv_ran += 1
+
 
 
 
@@ -353,6 +393,8 @@ class Experiment:
 
         #    pass
 
+        pass
+
 if __name__ == '__main__':
     np.random.seed(seed=47)
     random.seed(47)
@@ -360,19 +402,13 @@ if __name__ == '__main__':
     start_adj_matrix = nx.to_numpy_array(G)
     pcdag = pc_a.pc(G)
 
-    """
-
-
     experiment = Experiment(5, 5)
     shared_pos = experiment.visualize_pcdag(pcdag, title="PCDAG")
     true_DAG, DAG = experiment.random_dag_from_pcdag(pcdag)  # gets random graph from MEC(s)
-    dag = experiment.qbc(epochs = 1, committee_size = 3, pcdag = pcdag, true_causal_graph = DAG, data = dg.generate_data(DAG), k = 1, _lambda = 0.5)
-    #hamming, num, sampled_edge_indices = experiment.random_adv_design(pcdag = pcdag, true_causal_graph = DAG, true_causal_dag = true_DAG, data = dg.generate_data(graph = DAG), k = 10)
+    hamming, num, sampled_edge_indices = experiment.random_adv_design(pcdag = pcdag, true_causal_graph = DAG, true_causal_dag = true_DAG, data = dg.generate_data(graph = DAG), k = 10)
     print(hamming)
     print(num)
     print(sampled_edge_indices)
-
-    """
 
 
 """

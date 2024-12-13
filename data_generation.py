@@ -14,6 +14,7 @@ def create_dag(n: int, expected_degree: int) -> nx.DiGraph:
     DAG = nx.DiGraph()
     DAG.add_nodes_from(undirected_graph.nodes)
 
+    """
     # creates immorality w/ 3 randomly selected nodes
     nodes = list(undirected_graph.nodes)
     random.shuffle(nodes)
@@ -23,6 +24,7 @@ def create_dag(n: int, expected_degree: int) -> nx.DiGraph:
 
     # excludes these edges to preserve immorality and acyclicity
     excluded_edges = {(a, c), (c, a), (b, a), (b, c)}
+    """
 
     max_edges = n * (n - 1) // 2  # max number of possible edges in a DAG
     num_edges = min(expected_degree * n / 2, max_edges)
@@ -31,20 +33,20 @@ def create_dag(n: int, expected_degree: int) -> nx.DiGraph:
     for u, v in undirected_graph.edges():
         if DAG.number_of_edges() >= num_edges:
             break
-        if random.choice([True, False]) and (u,v) not in excluded_edges:
+        if random.choice([True, False]):
             DAG.add_edge(u, v)
             # reverses direction if adding edge creates a cycle
             if not nx.is_directed_acyclic_graph(DAG):
                 DAG.remove_edge(u, v)
                 DAG.add_edge(v, u)
-        elif (v,u) not in excluded_edges:
+        else:
             DAG.add_edge(v, u)
             if not nx.is_directed_acyclic_graph(DAG):
                 DAG.remove_edge(v, u)
                 DAG.add_edge(u, v)
 
     possible_edges = [(i, j) for i in range(n) for j in range(n) if i != j and not DAG.has_edge(i, j)]
-    possible_edges = [edge for edge in possible_edges if edge not in excluded_edges]
+    possible_edges = [edge for edge in possible_edges]
     random.shuffle(possible_edges)
 
     # randomly adds additional edges while maintaining acyclicity
@@ -54,6 +56,9 @@ def create_dag(n: int, expected_degree: int) -> nx.DiGraph:
         DAG.add_edge(source, target)
         if not nx.is_directed_acyclic_graph(DAG):
             DAG.remove_edge(source, target)
+
+    if not nx.compute_v_structures(DAG):
+        return create_dag(n, expected_degree)
 
     return DAG
 
