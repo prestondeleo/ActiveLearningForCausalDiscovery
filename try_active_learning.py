@@ -88,7 +88,7 @@ def get_average_hamming_distances(num_nodes: int, num_iterations: int, committee
             np.mean(rand_runtimes), np.mean(rand_adv_runtimes)]
 
 # compares average hamming distance and average number of interventions for the 3 models
-def performance_comparison(num_nodes: list[int], num_iterations: int, committee_size: int, epochs: int):
+def performance_comparison(num_nodes: int, num_iterations: int, committee_size: int, epochs: int):
     #df1 = pd.DataFrame([get_average_hamming_distances(size, num_iterations, committee_size, epochs)[0] for size in
      #                  num_nodes])
 
@@ -97,11 +97,10 @@ def performance_comparison(num_nodes: list[int], num_iterations: int, committee_
     rand_times = []
     rand_adv_times = []
 
-    for size in num_nodes:
-        results.append(get_average_hamming_distances(size, num_iterations, committee_size, epochs)[0])
-        qbc_times.append(get_average_hamming_distances(size, num_iterations, committee_size, epochs)[1])
-        rand_times.append(get_average_hamming_distances(size, num_iterations, committee_size, epochs)[2])
-        rand_adv_times.append(get_average_hamming_distances(size, num_iterations, committee_size, epochs)[3])
+    results.append(get_average_hamming_distances(num_nodes, num_iterations, committee_size, epochs)[0])
+    qbc_times.append(get_average_hamming_distances(num_nodes, num_iterations, committee_size, epochs)[1])
+    rand_times.append(get_average_hamming_distances(num_nodes, num_iterations, committee_size, epochs)[2])
+    rand_adv_times.append(get_average_hamming_distances(num_nodes, num_iterations, committee_size, epochs)[3])
 
     df1 = pd.DataFrame(results)
 
@@ -129,7 +128,7 @@ def performance_comparison(num_nodes: list[int], num_iterations: int, committee_
 
     return unpacked_df, df2
 
-def save_performance_info(num_nodes: list[int], num_iterations: int, committee_size: int, epochs: int):
+def save_performance_info(num_nodes: int, num_iterations: int, committee_size: int, epochs: int):
     df1 = performance_comparison(num_nodes, num_iterations, committee_size, epochs)[0]
     df1.to_csv(f'performance_comp_{num_nodes}_nodes_{num_iterations}_iterations_{committee_size}_committee_'
               f'{epochs}_epochs.csv')
@@ -138,7 +137,7 @@ def save_performance_info(num_nodes: list[int], num_iterations: int, committee_s
     df2.to_csv(f'time_comp_{num_nodes}_nodes_{num_iterations}_iterations_{committee_size}_committee_'
                f'{epochs}_epochs.csv')
 
-def plot(num_nodes: list[int], num_iterations: int, committee_size: int, epochs: int):
+def plot(num_nodes: int, num_iterations: int, committee_size: int, epochs: int):
     df = performance_comparison(num_nodes, num_iterations, committee_size, epochs)[0]
 
     plt.figure(figsize=(10, 6))
@@ -153,4 +152,4 @@ def plot(num_nodes: list[int], num_iterations: int, committee_size: int, epochs:
 
     plt.show()
 
-#save_performance_info([10], 1, 1, 1)
+performance_comparison(10, 1, 1, 1)
