@@ -2,7 +2,7 @@ from typing import List, Any
 
 from numpy import ndarray, dtype
 import torch.optim as optim
-
+from collections import Counter
 import data_generation
 import data_generation as dg
 import pc_algorithm as pc_a
@@ -286,7 +286,16 @@ class Experiment:
         pass
 
     def majority_vote(self, predictions:list)->np.ndarray:
-        pass
+        n_nodes = predictions[0].shape[0]
+        final_pcdag = np.zeros((n_nodes, n_nodes), dtype=int)
+        for i in range(n_nodes):
+            for j in range(n_nodes):
+                edge_types = [(pcdag[i, j], pcdag[j, i]) for pcdag in predictions]
+                edge_count = Counter(edge_types)
+                most_common_edge, _ = edge_count.most_common(1)[0]
+                final_pcdag[i, j] = most_common_edge[0]
+                final_pcdag[j, i] = most_common_edge[1]
+        return final_pcdag
 
     def qbc(self, epochs:int, committee_size:int, pcdag:np.ndarray, true_causal_dag:np.ndarray, true_causal_graph:nx.DiGraph, data:pd.DataFrame, k:int, _lambda:int):
         for interv in k:
@@ -294,7 +303,6 @@ class Experiment:
             """
             somewhere in loop need to cjeck if pcdag is now dag and break loop if so
             """
-
 
             committee = [GCN(len(pcdag)) for member in range(committee_size)]
             optimizers = [optim.Adam(model.parameters(), lr=0.01) for model in committee]
@@ -307,8 +315,7 @@ class Experiment:
                 prediction = member.predict_pcdag(pcdag = pcdag)
                 predictions.append(prediction)
 
-            majority_vote = here
-
+            committee_pcdag = self.majority_vote(predictions = predictions)
             maximal_disagreed_node = self.get_maximal_disagreement([0])
             updated_pcdag = self.unary_discovery(interv_node = maximal_disagreed_node, true_causal_graph = true_causal_graph, pcdag = pcdag, data = data)
             pcdag = updated_pcdag
