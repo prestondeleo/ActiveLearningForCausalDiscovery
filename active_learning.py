@@ -266,7 +266,7 @@ class Experiment:
                 updated_pcdag = self.unary_discovery(interv_node=node, true_causal_graph=true_causal_graph, pcdag=updated_pcdag, data = data)
                 hamming_distances.append(self.hamming_distance(updated_pcdag, true_causal_dag))
                 num_interv_ran += 1
-        return hamming_distances, num_interv_ran,sampled_edge_indices
+        return hamming_distances, num_interv_ran, sampled_edge_indices
     
     def get_trainloader(self, pcdag:np.ndarray):
         trainloader = []
@@ -278,13 +278,42 @@ class Experiment:
                 y = torch.tensor(y, dtype=torch.float32)
             trainloader.append((x, y))
         return trainloader
+    
+    #predictions is list of pcdags returns node of most disagreement
+    def get_maximal_disagreement(self, predictions:list)->int:
+        n_nodes = predictions[0].shape[0]
 
-    def qbc(self, epochs:int, committee_size:int, pcdag:np.ndarray, true_causal_dag:np.ndarray, k:int):
-        committtee = [GCN(len(pcdag)) for member in range(committee_size)]
-        optimizers = [optim.Adam(model.parameters(), lr=0.01) for model in committtee]
-        trainloaders = [self.get_trainloader(pcdag = pcdag) for member in range(committee_size)]
-        for epoch in epochs:
-            committee_results = None
+        pass
+
+    def majority_vote(self, predictions:list)->np.ndarray:
+        pass
+
+    def qbc(self, epochs:int, committee_size:int, pcdag:np.ndarray, true_causal_dag:np.ndarray, true_causal_graph:nx.DiGraph, data:pd.DataFrame, k:int, _lambda:int):
+        for interv in k:
+
+            """
+            somewhere in loop need to cjeck if pcdag is now dag and break loop if so
+            """
+
+
+            committee = [GCN(len(pcdag)) for member in range(committee_size)]
+            optimizers = [optim.Adam(model.parameters(), lr=0.01) for model in committee]
+            trainloaders = [self.get_trainloader(pcdag = pcdag) for member in range(committee_size)]
+            #for epoch in epochs:
+            #   committee_results = None
+            predictions = []
+            for i, member in enumerate(committee):
+                member.run_train(self, epochs, optimizers[i], trainloaders[i], _lambda)
+                prediction = member.predict_pcdag(pcdag = pcdag)
+                predictions.append(prediction)
+
+            majority_vote = here
+
+            maximal_disagreed_node = self.get_maximal_disagreement([0])
+            updated_pcdag = self.unary_discovery(interv_node = maximal_disagreed_node, true_causal_graph = true_causal_graph, pcdag = pcdag, data = data)
+            pcdag = updated_pcdag
+        
+
 
 
 
