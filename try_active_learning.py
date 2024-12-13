@@ -61,14 +61,16 @@ def get_average_hamming_distances(num_nodes: int, num_iterations: int, committee
     for i in range(num_iterations):
         print(f"Iteration{i+1}")
 
-        qbc_hamming, rand_hamming, rand_adv_hamming = get_metrics(num_nodes, committee_size, epochs)[0]
+        metrics = get_metrics(num_nodes, committee_size, epochs)
+
+        qbc_hamming, rand_hamming, rand_adv_hamming = metrics[0]
         qbc_hamming_results.append(qbc_hamming)
         rand_hamming_results.append(rand_hamming)
         rand_adv_hamming_results.append(rand_adv_hamming)
 
-        qbc_runtimes.append(get_metrics(num_nodes, committee_size, epochs)[1])
-        rand_runtimes.append(get_metrics(num_nodes, committee_size, epochs)[2])
-        rand_adv_runtimes.append(get_metrics(num_nodes, committee_size, epochs)[3])
+        qbc_runtimes.append(metrics[1])
+        rand_runtimes.append(metrics[2])
+        rand_adv_runtimes.append(metrics[3])
 
     qbc_pad = max(len(ls) for ls in qbc_hamming_results)
     rand_pad = max(len(ls) for ls in rand_hamming_results)
@@ -133,12 +135,11 @@ def performance_comparison(num_nodes: int, num_iterations: int, committee_size: 
     return unpacked_df, df2
 
 def save_performance_info(num_nodes: int, num_iterations: int, committee_size: int, epochs: int):
-    df1 = performance_comparison(num_nodes, num_iterations, committee_size, epochs)[0]
-    df1.to_csv(f'performance_comp_{num_nodes}_nodes_{num_iterations}_iterations_{committee_size}_committee_'
+    dfs = performance_comparison(num_nodes, num_iterations, committee_size, epochs)
+    dfs[0].to_csv(f'performance_comp_{num_nodes}_nodes_{num_iterations}_iterations_{committee_size}_committee_'
               f'{epochs}_epochs.csv')
 
-    df2 = performance_comparison(num_nodes, num_iterations, committee_size, epochs)[1]
-    df2.to_csv(f'time_comp_{num_nodes}_nodes_{num_iterations}_iterations_{committee_size}_committee_'
+    dfs[1].to_csv(f'time_comp_{num_nodes}_nodes_{num_iterations}_iterations_{committee_size}_committee_'
                f'{epochs}_epochs.csv')
 
 def plot(num_nodes: int, num_iterations: int, committee_size: int, epochs: int):
