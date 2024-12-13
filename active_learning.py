@@ -397,13 +397,13 @@ class Experiment:
     def qbc(self, epochs:int, committee_size:int, pcdag:np.ndarray, true_causal_dag:np.ndarray, true_causal_graph:nx.DiGraph, data:pd.DataFrame, k:int, _lambda:int):
             hamming_distances = []
             num_interv_ran = 0
+            pcdag = pcdag.copy()
             for interv in range(k):
 
                 """
                 somewhere in loop need to cjeck if pcdag is now dag and break loop if so
                 """
 
-                committee = [gr.GCN(len(pcdag)) for member in range(committee_size)]
                 committee = [gr.GCN(len(pcdag)) for member in range(committee_size)]
                 optimizers = [optim.Adam(model.parameters(), lr=0.01) for model in committee]
                 trainloaders = [self.get_trainloader(pcdag = pcdag) for member in range(committee_size)]
@@ -414,8 +414,6 @@ class Experiment:
                 for i, member in enumerate(committee):
                     member.run_train(epochs, optimizers[i], trainloaders[i], _lambda)
                     _, prediction = member.predict_pcdag(pcdag = pcdag)
-                    member.run_train(self, epochs, optimizers[i], trainloaders[i], _lambda)
-                    prediction = member.predict_pcdag(pcdag = pcdag)
                     predictions.append(prediction)
 
                 # if committe DAG is right than break and no more interventions
@@ -424,7 +422,7 @@ class Experiment:
                 if committee_pcdag == true_causal_dag:
                     break
                 #add statistics here 
-                maximal_disagreed_node = self.get_maximal_disagreement([0])
+                maximal_disagreed_node = self.get_maximal_disagreement(predictions = predictions)
                 updated_pcdag = self.unary_discovery(interv_node = maximal_disagreed_node, true_causal_graph = true_causal_graph, pcdag = pcdag, data = data)
                 #add statistics here 
                 pcdag = updated_pcdag
@@ -444,7 +442,7 @@ if __name__ == '__main__':
     shared_pos = experiment.visualize_pcdag(pcdag, title="PCDAG")
     
     true_DAG, DAG = experiment.random_dag_from_pcdag(pcdag) 
-dag = experiment.qbc(epochs = 1, committee_size = 3, pcdag = pcdag, true_causal_graph = DAG, data = dg.generate_data(DAG), k = 1, _lambda = 0.5)    #hamming, num, sampled_edge_indices = experiment.random_adv_design(pcdag = pcdag, true_causal_graph = DAG, true_causal_dag = true_DAG, data = dg.generate_data(graph = DAG), k = 10)
+    hamming_distances, num_interv_ran = experiment.qbc(epochs = 1, committee_size = 3, pcdag = pcdag, true_causal_dag=true_DAG, true_causal_graph = DAG, data = dg.generate_data(DAG), k = 1, _lambda = 0.5)    #hamming, num, sampled_edge_indices = experiment.random_adv_design(pcdag = pcdag, true_causal_graph = DAG, true_causal_dag = true_DAG, data = dg.generate_data(graph = DAG), k = 10)
     #print(hamming)
     #print(num)
     #print(sampled_edge_indices)
