@@ -21,7 +21,6 @@ def get_metrics(num_nodes: int, committee_size: int, epochs: int):
         data=dg.generate_data(DAG), k=num_nodes, _lambda=0.5
     )
     qbc_runtime = time.time() - start_time
-    print(f"qbc runtime: {qbc_runtime:.4f} seconds")
 
     start_time = time.time()
     rand_hamming, rand_num_interv = experiment.random_design(
@@ -128,7 +127,6 @@ def performance_comparison(num_nodes: list[int], num_iterations: int, committee_
         'rand_adv': df1['rand_adv_hammings_means'].iloc[0]
     })
 
-    print(df2)
     return unpacked_df, df2
 
 def save_performance_info(num_nodes: list[int], num_iterations: int, committee_size: int, epochs: int):
