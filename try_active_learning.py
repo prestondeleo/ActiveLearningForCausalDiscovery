@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import time
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # remember to change committee size
 def get_metrics(num_nodes: int, committee_size: int, epochs: int):
@@ -97,10 +99,12 @@ def performance_comparison(num_nodes: int, num_iterations: int, committee_size: 
     rand_times = []
     rand_adv_times = []
 
-    results.append(get_average_hamming_distances(num_nodes, num_iterations, committee_size, epochs)[0])
-    qbc_times.append(get_average_hamming_distances(num_nodes, num_iterations, committee_size, epochs)[1])
-    rand_times.append(get_average_hamming_distances(num_nodes, num_iterations, committee_size, epochs)[2])
-    rand_adv_times.append(get_average_hamming_distances(num_nodes, num_iterations, committee_size, epochs)[3])
+    metrics = get_average_hamming_distances(num_nodes, num_iterations, committee_size, epochs)
+
+    results.append(metrics[0])
+    qbc_times.append(metrics[1])
+    rand_times.append(metrics[2])
+    rand_adv_times.append(metrics[3])
 
     df1 = pd.DataFrame(results)
 
