@@ -229,18 +229,18 @@ class Experiment:
     def random_design(self, pcdag:np.ndarray, true_causal_graph:nx.DiGraph, true_causal_dag:np.ndarray, data:pd.DataFrame, k:int):
         sampled_edge_indices = np.random.choice(self.get_num_nodes(pcdag), size=k, replace=False)
         hamming_distances = []
-        num_interv_identif = 0
+        num_interv_ran = 0
         updated_pcdag = pcdag.copy()
         for i, node in enumerate(sampled_edge_indices):
             if self.hamming_distance(updated_pcdag, true_causal_dag) == 0:
                 hamming_distances.append(self.hamming_distance(updated_pcdag, true_causal_dag))
-                num_interv_identif += 1
+                num_interv_ran += 1
                 break
             else:
                 updated_pcdag = self.unary_discovery(interv_node=node, true_causal_graph=true_causal_graph, pcdag=updated_pcdag, data = data)
                 hamming_distances.append(self.hamming_distance(updated_pcdag, true_causal_dag))
-                num_interv_identif += 1
-        return hamming_distances, num_interv_identif,sampled_edge_indices
+                num_interv_ran += 1
+        return hamming_distances, num_interv_ran,sampled_edge_indices
     
     def get_unoriented_nodes(self, pcdag: np.ndarray) -> np.ndarray:
         unoriented_nodes = []
@@ -253,19 +253,32 @@ class Experiment:
         unoriented_nodes = self.get_unoriented_nodes(pcdag)
         sampled_edge_indices = np.random.choice(unoriented_nodes, size=min(k, len(unoriented_nodes)), replace=False)
         hamming_distances = []
-        num_interv_identif = 0
+        num_interv_ran = 0
         updated_pcdag = pcdag.copy()
         for i, node in enumerate(sampled_edge_indices):
             if self.hamming_distance(updated_pcdag, true_causal_dag) == 0:
                 hamming_distances.append(self.hamming_distance(updated_pcdag, true_causal_dag))
-                num_interv_identif += 1
+                num_interv_ran += 1
                 break
             else:
                 updated_pcdag = self.unary_discovery(interv_node=node, true_causal_graph=true_causal_graph, pcdag=updated_pcdag, data = data)
                 hamming_distances.append(self.hamming_distance(updated_pcdag, true_causal_dag))
-                num_interv_identif += 1
-        return hamming_distances, num_interv_identif,sampled_edge_indices
+                num_interv_ran += 1
+        return hamming_distances, num_interv_ran,sampled_edge_indices
     
+
+
+    def qbc(self, committee:list, k:int):
+        for model in committee:
+            #train all models and predict DAG
+            #choose node with most disagreement
+            #intervene on node
+            #retrain models
+            #rinse 
+
+            pass
+
+        pass
 
 if __name__ == '__main__':
     np.random.seed(seed=47)
